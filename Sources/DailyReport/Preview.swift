@@ -38,6 +38,58 @@ enum Preview {
         renderToPNG(strip, to: path)
     }
 
+    /// Renders the run progress panel across its key states — start, each stage, the
+    /// long summarize step with its note, and a multi-day backfill — for design review.
+    /// ImageRenderer can't snapshot a live ProgressView, so the bar is drawn statically
+    /// here; the running app uses the real native bar (RunProgressBar).
+    @MainActor static func renderProgress(to path: String) {
+        func bar(_ fraction: Double) -> some View {
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.secondary.opacity(0.22)).frame(width: 300, height: 6)
+                Capsule().fill(Design.accent).frame(width: 300 * fraction, height: 6)
+            }
+        }
+        func row(_ title: String, fraction: Double?, label: String, note: Bool, spinner: Bool) -> some View {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
+                if let f = fraction {
+                    bar(f)
+                    HStack(spacing: 6) {
+                        if spinner {
+                            Image(systemName: "circle.dotted").font(.system(size: 10)).foregroundStyle(.secondary)
+                        }
+                        Text(label).font(.system(size: 11)).foregroundStyle(.secondary)
+                        Spacer()
+                        Text("\(Int((f * 100).rounded()))%").font(.system(size: 10, weight: .medium))
+                            .monospacedDigit().foregroundStyle(.tertiary)
+                    }
+                    .frame(width: 300)
+                    if note {
+                        Text("요약은 수십 초~수 분 걸릴 수 있어요.")
+                            .font(.system(size: 10)).foregroundStyle(.tertiary)
+                    }
+                } else {
+                    HStack(spacing: 6) {
+                        Image(systemName: "circle.dotted").font(.system(size: 10)).foregroundStyle(.secondary)
+                        Text(label).font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
+                    .frame(width: 300, alignment: .leading)
+                }
+            }
+        }
+        let strip = VStack(alignment: .leading, spacing: 16) {
+            row("시작 중 (아직 단계 없음)", fraction: nil, label: "시작 중…", note: false, spinner: false)
+            row("수집", fraction: 0.0, label: "수집 중", note: false, spinner: false)
+            row("살균", fraction: 0.25, label: "살균 중", note: false, spinner: false)
+            row("요약 (모델 실행, 긴 대기)", fraction: 0.5, label: "요약 중", note: true, spinner: true)
+            row("노션 업로드", fraction: 0.75, label: "노션 업로드 중", note: false, spinner: false)
+            row("백필 (3일 중 2일째)", fraction: 0.5, label: "요약 중 · 날짜 2/3", note: true, spinner: true)
+        }
+        .padding(20)
+        .background(Color(nsColor: .windowBackgroundColor))
+        renderToPNG(strip, to: path)
+    }
+
     @MainActor private static func renderToPNG(_ view: some View, to path: String) {
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2

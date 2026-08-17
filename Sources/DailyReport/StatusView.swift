@@ -100,6 +100,8 @@ struct StatusView: View {
             .tint(Design.accent)
             .disabled(state.running)
 
+            progressPanel
+
             HStack(spacing: 8) {
                 Text("지난 날짜").font(.system(size: 12)).foregroundStyle(.secondary)
                 DatePicker("", selection: $pastDate, in: ...Date(), displayedComponents: .date)
@@ -112,6 +114,11 @@ struct StatusView: View {
             }
             .font(.system(size: 12))
         }
+    }
+
+    /// The live progress bar, shown only while a run is in flight. See RunProgressBar.
+    @ViewBuilder private var progressPanel: some View {
+        if state.running { RunProgressBar(progress: state.progress) }
     }
 
     /// Shown until Notion is connected. Tapping opens Settings, where the setup

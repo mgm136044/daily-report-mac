@@ -232,14 +232,23 @@ case "run-day":
             print("밀린 날짜 \(runTargets.count)일: \(runTargets.joined(separator: ", "))")
         }
 
+        // Announce the denominator, then let each runOne report its stage so the app's
+        // progress bar can advance. stdout is block-buffered when piped to the app, so
+        // every progress line is flushed immediately — otherwise the bar would sit still
+        // and only jump at the very end.
+        print(RunProgressWire.total(runTargets.count)); fflush(stdout)
+
         var okCount = 0
         var failed: [String] = []
-        for date in runTargets {
+        for (index, date) in runTargets.enumerated() {
             let runner = DayRunner(config: cfg, selfArtifactBase: base, stateDir: stateDir,
                 workDir: workDir, claudeRunner: SummaryEngine.runner(for: cfg),
                 notionClient: runClient, databaseId: databaseId)
             do {
-                let r = try await runner.runOne(date: date)
+                let r = try await runner.runOne(date: date, onStage: { stage in
+                    print(RunProgressWire.stage(index: index + 1, date: date, stage: stage))
+                    fflush(stdout)
+                })
                 var entry: [String: Any] = ["at": ISO8601DateFormatter().string(from: Date())]
                 if let skip = r.skipped {
                     entry["skipped"] = skip

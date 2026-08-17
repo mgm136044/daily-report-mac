@@ -32,12 +32,18 @@ public struct DayRunner {
         self.databaseId = databaseId; self.fm = fileManager
     }
 
-    public func runOne(date: String) async throws -> RunResult {
+    /// Runs one day end to end. `onStage`, if given, is called at the start of each
+    /// pipeline step so a caller can surface progress (the runner prints it; the app
+    /// draws the bar). It fires before the work, in order: collect → sanitize →
+    /// summarize → notion (the last two are skipped on a no-activity day).
+    public func runOne(date: String, onStage: ((RunStage) -> Void)? = nil) async throws -> RunResult {
         RunSupport.ensureDirs([stateDir, workDir])
+        onStage?(.collect)
         let refined = try DayCollector(config: config, selfArtifactBase: base, fileManager: fm)
             .collect(date: date)
 
         // sanitize BEFORE the model sees it
+        onStage?(.sanitize)
         let (cleanDigestAny, digestFindings) = Sanitizer.redactStructure(DigestJSON.object(refined))
         let cleanDigest = cleanDigestAny as? [String: Any] ?? [:]
         let digestPath = workDir + "/digest_\(date).json"
@@ -54,6 +60,7 @@ public struct DayRunner {
         }
 
         let summarizer = Summarizer(config: config, runner: claudeRunner)
+        onStage?(.summarize)
         let rawReport = try summarizer.summarize(digest: cleanDigest, date: date)
         // sanitize AFTER, in case the model echoed something
         let (report, reportFindings) = Sanitizer.redact(rawReport)
@@ -62,6 +69,7 @@ public struct DayRunner {
 
         let source = (digestPath as NSString).abbreviatingWithTildeInPath
         let digest = summarizer.buildDayDigest(refined: refined, report: report, source: source)
+        onStage?(.notion)
         _ = try await notionClient.upsert(databaseId: databaseId, digest: digest,
                                           config: config, now: Date())
 

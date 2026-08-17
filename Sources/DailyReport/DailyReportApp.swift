@@ -167,6 +167,7 @@ final class AppState: ObservableObject {
     @Published var lastError: String?
     @Published var notice: String?          // informational, non-error (e.g. "이미 생성 중")
     @Published private(set) var running = false
+    @Published private(set) var progress: RunProgress?   // live pipeline progress; nil = idle
     @Published private(set) var update: UpdateStatus = .none
     /// Set by the not-connected popover CTA to ask Settings to (re-)present the wizard.
     /// A deterministic signal so the CTA works every time, not just on first launch.
@@ -240,13 +241,33 @@ final class AppState: ObservableObject {
         running = true
         lastError = nil
         notice = nil
+        progress = nil
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         p.arguments = [runnerPath, "run-day"] + dates
+
+        // Capture the runner's stdout and parse its "@P" progress lines to drive the bar.
+        // Reading via AsyncBytes.lines keeps the parser a plain local inside one Task — no
+        // mutable state shared across threads. The runner flushes each line, so updates
+        // arrive as the run progresses rather than all at the end.
+        let pipe = Pipe()
+        p.standardOutput = pipe
+        let outHandle = pipe.fileHandleForReading
+        Task { [weak self] in
+            var parser = RunProgressParser()
+            do {
+                for try await line in outHandle.bytes.lines {
+                    guard let update = parser.consume(line) else { continue }
+                    await MainActor.run { self?.progress = update }
+                }
+            } catch { /* pipe closed when the runner exits */ }
+        }
+
         p.terminationHandler = { [weak self] proc in
             let code = proc.terminationStatus
             Task { @MainActor in
                 self?.running = false
+                self?.progress = nil
                 self?.reload()
                 // A held lock (another run already in progress) is not a failure —
                 // show a neutral notice, not a red error. Real failures still surface.
