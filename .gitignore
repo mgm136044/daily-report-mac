@@ -1,0 +1,44 @@
+# ── 절대 커밋 금지 (스펙 9절) ────────────────────────────────
+# 런타임 개인 데이터·자격증명. 토큰은 Keychain에 있으나, 방어적으로 파일도 막는다.
+config.json
+.env
+*.env
+state/
+logs/
+work/
+fixtures/
+*.plist.local
+# 설치된 LaunchAgent 사본 (사용자명·절대경로 포함)
+com.*.plist
+# 단, 앱 번들에 들어갈 소스 템플릿(상대경로·비밀 없음)은 추적한다
+!Resources/LaunchAgents/*.plist
+
+# ── Swift / SwiftPM ──────────────────────────────────────────
+.build/
+.swiftpm/
+Package.resolved
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+
+# ── 배포 산출물 ──────────────────────────────────────────────
+dist/
+dist/build/
+*.dmg
+*.app
+*.zip
+# 공증 자격증명·프로파일
+dist/*.p12
+dist/notarize.env
+dist/*.provisionprofile
+
+# ── macOS ────────────────────────────────────────────────────
+.DS_Store
+
+# ── 공개 레포에서 제외하는 내부 문서 (개인 경로·실명·타 프로젝트 참조 포함) ──
+# 로컬 작업용으로만 유지하고 공개 저장소에는 넣지 않는다.
+CONTEXT.md
+docs/
+.env             # (재확인) 자격증명 절대 커밋 금지
+*.env
