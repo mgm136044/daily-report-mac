@@ -50,4 +50,37 @@ final class LogicalDateTests: XCTestCase {
         XCTAssertNil(LogicalDate.parseISO(nil))
         XCTAssertNil(LogicalDate.parseISO("not-a-date"))
     }
+
+    func test_weekdaySymbol_returns_the_korean_single_char_weekday() {
+        // Weekdays verified independently: `date -j -f "%Y-%m-%d" 2026-08-16 "+%A"` → 일요일 (Sunday),
+        // 2026-08-17 → 월요일 (Monday).
+        XCTAssertEqual(LogicalDate.weekdaySymbol("2026-08-16", config: config()), "일")
+        XCTAssertEqual(LogicalDate.weekdaySymbol("2026-08-17", config: config()), "월")
+    }
+
+    func test_weekdaySymbol_returns_empty_string_for_an_invalid_date() {
+        XCTAssertEqual(LogicalDate.weekdaySymbol("not-a-date", config: config()), "")
+    }
+
+    func test_timestampString_formats_a_fixed_date_in_the_config_timezone() {
+        // Arrange: a fixed instant (not wall-clock time) so the test is deterministic.
+        let moment = at("2026-08-17T04:05:00+09:00")
+
+        // Act
+        let s = LogicalDate.timestampString(moment, config: config())
+
+        // Assert
+        XCTAssertEqual(s, "2026-08-17 04:05")
+    }
+
+    func test_timestampString_reflects_a_different_configured_offset() {
+        // Arrange: the same instant, viewed through a 0-offset (UTC) config.
+        let moment = at("2026-08-17T04:05:00+09:00")
+
+        // Act
+        let s = LogicalDate.timestampString(moment, config: config(offset: 0))
+
+        // Assert: 04:05 +09:00 is 19:05 the previous day in UTC.
+        XCTAssertEqual(s, "2026-08-16 19:05")
+    }
 }

@@ -16,7 +16,8 @@ let package = Package(
             dependencies: ["DailyReportKit"]),
         .executableTarget(
             name: "DailyReport",
-            dependencies: ["DailyReportKit"]),
+            dependencies: ["DailyReportKit"],
+            resources: [.copy("Resources/design-system.css")]),
         .testTarget(
             name: "DailyReportKitTests",
             dependencies: ["DailyReportKit"]),

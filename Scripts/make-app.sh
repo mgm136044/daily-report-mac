@@ -13,6 +13,17 @@ IDENTITY="${DAILY_REPORT_SIGN_IDENTITY:-$(security find-identity -v -p codesigni
 [ -n "$IDENTITY" ] || { echo "✗ 서명 신원 없음 — DAILY_REPORT_SIGN_IDENTITY 설정 또는 Developer ID 인증서 필요"; exit 1; }
 APP="dist/$APP_NAME.app"
 
+# design-system.css is embedded in the report PDF's HTML and MUST match the tracked
+# design doc byte-for-byte. docs/ is gitignored (local-only), so the SwiftPM-bundled
+# copy under Sources/DailyReport/Resources/ is the version-controlled source of truth;
+# this only guards against the two silently drifting on a machine that still has docs/.
+if [ -f docs/design/design-system.css ]; then
+    if ! diff -q docs/design/design-system.css Sources/DailyReport/Resources/design-system.css >/dev/null; then
+        echo "✗ CSS 불일치 — docs/design/design-system.css 와 Sources/DailyReport/Resources/design-system.css 가 다릅니다"
+        exit 1
+    fi
+fi
+
 echo "▸ build (release) — v$VERSION"
 swift build -c release --product DailyReport
 swift build -c release --product daily-report-runner
@@ -24,6 +35,19 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/DailyReport            "$APP/Contents/MacOS/DailyReport"
 cp .build/release/daily-report-runner    "$APP/Contents/MacOS/daily-report-runner"
+
+# SwiftPM's generated Bundle.module accessor resolves resources via
+# `Bundle.main.bundleURL.appendingPathComponent("<pkg>_<target>.bundle")` — and
+# Bundle.main.bundleURL for a macOS app is the .app ROOT, not Contents/MacOS or
+# Contents/Resources (verified empirically with a throwaway probe .app). So the
+# resource bundle must sit directly inside $APP, sibling to Contents/.
+RESOURCE_BUNDLE=".build/release/daily-report-mac_DailyReport.bundle"
+if [ -d "$RESOURCE_BUNDLE" ]; then
+    cp -R "$RESOURCE_BUNDLE" "$APP/"
+else
+    echo "✗ SwiftPM 리소스 번들 없음: $RESOURCE_BUNDLE (design-system.css 로드 실패 위험)"
+    exit 1
+fi
 
 # App icon: build a multi-resolution .icns from Resources/logo.png (source of truth).
 if [ -f Resources/logo.png ]; then

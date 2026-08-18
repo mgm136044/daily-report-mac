@@ -14,7 +14,12 @@ enum Preview {
                     commits: 0, reportChars: 0, skippedReason: "활동 없음", at: nil),
         ], pendingCount: 1, health: .needsAttention(pending: 1))
 
-        renderToPNG(StatusPreview(summary: sample).frame(width: 380), to: path)
+        // DayCardView (rendered inside StatusPreview) now reads @EnvironmentObject
+        // AppState for its PDF button — inject one here, same as renderWizard below,
+        // so this render path doesn't crash on a missing environment object.
+        renderToPNG(
+            StatusPreview(summary: sample).environmentObject(AppState()).frame(width: 380),
+            to: path)
     }
 
     /// Renders the setup wizard's five steps (plus step-5 success and failure states)

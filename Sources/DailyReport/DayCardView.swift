@@ -3,6 +3,7 @@ import DailyReportKit
 
 /// One day's card: date + rolled-up counts, in the app's material/stroke look.
 struct DayCardView: View {
+    @EnvironmentObject var state: AppState
     let card: DayCard
     var body: some View {
         HStack(spacing: 12) {
@@ -23,6 +24,18 @@ struct DayCardView: View {
             if card.kind == .done && !card.synced {
                 Text("\(card.reportChars)자")
                     .font(.system(size: 10, weight: .medium)).foregroundStyle(.tertiary)
+            }
+            // Only offer PDF for a day that actually has a report — a skipped day has
+            // no report_<date>.md to render.
+            if card.kind == .done {
+                Button {
+                    state.generateAndViewPDF(for: card.date)
+                } label: {
+                    Image(systemName: "doc.richtext")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Design.accent)
+                .help("이 날짜를 PDF로 보기")
             }
         }
         .padding(.horizontal, 12).padding(.vertical, 10)

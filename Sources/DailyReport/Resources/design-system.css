@@ -1,0 +1,126 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   하루 마감 보고서 — PDF 디자인 시스템 · 정규 CSS (NORMATIVE, v4)
+   ────────────────────────────────────────────────────────────────────────
+   이 파일이 디자인 시스템의 유일한 규범(single source of truth)이다.
+   보고서를 렌더하는 모든 것(이 미리보기 reference.html, 앱의 WKWebView 임베드,
+   임의의 독립 재현)은 이 파일을 바이트 단위로 그대로 포함해야 한다. 산문 문서
+   pdf-report-design-system.md 는 이 CSS의 '설명'일 뿐 — 충돌 시 이 CSS가 이긴다.
+   재도출을 없애 서로 다른 세션이 같은 디자인을 내도록(자유도 0) 만드는 장치.
+   상세: normative-css-execution-plan.md
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --accent: #59A6FF;          /* 유일한 강조색 — 통계 숫자 + 섹션 틱, 딱 2역할 */
+  --ink: #1b1c1e;
+  --ink-2: #55585e;
+  --ink-3: #8b9098;
+  --hair: #e6e8ec;
+  --code-bg: #f4f5f7;
+  --page: #ffffff;
+
+  --f-title: 22pt;
+  --f-h2: 13pt;
+  --f-h3: 11.5pt;
+  --f-h4: 10.5pt;
+  --f-body: 10.5pt;
+  --f-small: 9pt;
+  --f-tiny: 8pt;
+  --lh-body: 1.72;
+  --font: -apple-system, "Apple SD Gothic Neo", "Pretendard", system-ui, sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, monospace;
+}
+
+/* 전역 리셋 — UA 기본값 발산 제거. `*`(명세성 0,0,0)라 모든 컴포넌트 규칙이 이걸
+   덮는다. `.page *`(0,1,0)는 hr/blockquote/h4 같은 요소 규칙을 잘못 이겨 margin·
+   border를 지우므로 쓰지 않는다. list-style·font는 건드리지 않는다(마커·굵기 보존). */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: #d9dce1; }
+body {
+  font-family: var(--font); color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  padding: 28px; display: flex; justify-content: center;
+}
+
+.page {
+  width: 794px; min-height: 1123px;
+  background: var(--page);
+  padding: 64px 64px 52px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.18);
+  position: relative;
+  display: flex; flex-direction: column;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* ① 머리말 */
+.head { display: flex; align-items: baseline; justify-content: space-between;
+        padding-bottom: 12px; border-bottom: 2px solid var(--ink); }
+.head .title { font-size: var(--f-title); font-weight: 800; letter-spacing: -.02em; }
+.head .date { font-size: var(--f-body); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+/* ② 통계 행 */
+.stats { display: flex; gap: 0; margin: 18px 0 4px; break-inside: avoid; }
+.stat { flex: 1; padding: 2px 0; }
+.stat .n { font-size: 17pt; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.stat .l { font-size: var(--f-tiny); color: var(--ink-3); margin-top: 1px; letter-spacing: .02em; }
+
+/* ③ 섹션 제목 */
+h2.sec {
+  font-size: var(--f-h2); font-weight: 700; margin: 26px 0 10px; letter-spacing: -.01em;
+  display: flex; align-items: center; gap: 8px; break-after: avoid;
+}
+h2.sec::before { content: ""; width: 3px; height: 13px; background: var(--accent); border-radius: 2px; }
+
+/* ③ 프로젝트명 */
+h3.proj { font-size: var(--f-h3); font-weight: 700; margin: 16px 0 3px; letter-spacing: -.01em; break-after: avoid; }
+
+/* ④ 활동 한 줄 */
+.activity { font-size: var(--f-small); color: var(--ink-3); margin-bottom: 6px;
+            font-variant-numeric: tabular-nums;
+            display: flex; flex-wrap: wrap; gap: 3px 18px; align-items: baseline; break-inside: avoid; }
+.activity b { color: var(--ink-2); font-weight: 500; }
+.activity .time { margin-left: auto; }
+
+/* ⑤ 본문 / 목록 / 인라인 코드 */
+p.body { font-size: var(--f-body); line-height: var(--lh-body); color: var(--ink); margin: 0 0 8px; orphans: 2; widows: 2; }
+p.body b { font-weight: 700; }
+ul.body { font-size: var(--f-body); line-height: var(--lh-body); margin: 4px 0 10px; padding-left: 18px; list-style-type: disc; }
+ul.body li { margin-bottom: 3px; }
+ul.body li::marker { color: var(--ink-3); }
+code { font-family: var(--mono); font-size: 9.2pt; background: var(--code-bg);
+       padding: 1px 5px; border-radius: 4px; color: #24292f; }
+
+/* ⑧ 마크다운 본문 요소 (§8) */
+h4 { font-size: var(--f-h4); font-weight: 700; color: var(--ink); margin: 10px 0 2px; }
+em { font-style: normal; }
+ol.body { font-size: var(--f-body); line-height: var(--lh-body); margin: 4px 0 10px; padding-left: 20px; list-style-type: decimal; }
+ol.body li { margin-bottom: 3px; }
+ol.body li::marker { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+pre { font-family: var(--mono); font-size: 9pt; line-height: 1.5; background: var(--code-bg); color: #24292f;
+      padding: 10px 12px; border-radius: 6px; margin: 6px 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; break-inside: auto; }
+pre code { background: none; padding: 0; font-size: inherit; color: inherit; border-radius: 0; }
+blockquote { margin: 6px 0 10px; padding: 6px 12px; background: #eef4ff; border-left: 3px solid var(--ink-3);
+             color: var(--ink-2); font-size: var(--f-body); line-height: var(--lh-body); }
+hr { border: none; border-top: 1px solid var(--hair); margin: 14px 0; }
+a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 2px; }
+table.body { width: 100%; border-collapse: collapse; font-size: var(--f-body); margin: 8px 0 12px; }
+table.body th { text-align: left; font-weight: 700; border-bottom: 1px solid var(--ink); padding: 5px 8px; }
+table.body td { border-bottom: 1px solid var(--hair); padding: 5px 8px; line-height: 1.45; }
+table.body thead { display: table-header-group; }
+
+.proj-block { margin-bottom: 4px; }
+.proj-block + .proj-block { padding-top: 10px; border-top: 1px solid var(--hair); }
+
+/* ⑥ 바닥글 */
+.foot { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--hair);
+        display: flex; align-items: center; justify-content: center; gap: 20px;
+        font-size: var(--f-tiny); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.foot .pageno { color: var(--ink-2); }
+
+/* ④ 페이지 기하 & 분할 (§4·§5) — 인쇄/PDF 전용, 화면 렌더엔 무영향 */
+@page { size: A4; margin: 54pt 48pt 48pt; }
+
+@media print {
+  body { background: #fff; padding: 0; }
+  .page { box-shadow: none; width: auto; min-height: auto; }
+}

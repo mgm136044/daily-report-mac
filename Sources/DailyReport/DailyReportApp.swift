@@ -166,6 +166,7 @@ final class AppState: ObservableObject {
     @Published private(set) var summary = LedgerSummary(cards: [], pendingCount: 0, health: .healthy)
     @Published var lastError: String?
     @Published var notice: String?          // informational, non-error (e.g. "이미 생성 중")
+    @Published var pdfError: String?        // set by generateAndViewPDF on failure
     @Published private(set) var running = false
     @Published private(set) var progress: RunProgress?   // live pipeline progress; nil = idle
     @Published private(set) var update: UpdateStatus = .none
@@ -279,6 +280,45 @@ final class AppState: ObservableObject {
             }
         }
         do { try p.run() } catch { lastError = "실행 실패: \(error)"; running = false }
+    }
+
+    // MARK: - PDF export
+
+    /// Read the day's digest + report md, assemble HTML with the normative CSS, render a
+    /// PDF, and show it. `base` is the app-support dir already resolved in AppState.
+    func generateAndViewPDF(for date: String) {
+        pdfError = nil
+        let work = base + "/work"
+        guard let md = try? String(contentsOfFile: work + "/report_\(date).md", encoding: .utf8) else {
+            pdfError = "\(date) 보고서 원문이 아직 없습니다."; return
+        }
+        // design-system.css ships as a SwiftPM resource in the module bundle. Bundle.module
+        // (NOT Bundle.main) is required — Bundle.main has no SwiftPM resources under `swift run`.
+        guard let cssURL = Bundle.module.url(forResource: "design-system", withExtension: "css"),
+              let css = try? String(contentsOf: cssURL, encoding: .utf8) else {
+            pdfError = "디자인 CSS를 찾을 수 없습니다."; return
+        }
+        let chrome = ReportChrome(
+            date: date, weekday: LogicalDate.weekdaySymbol(date, config: config),
+            projects: digestInt(work, date, "projects"), sessions: digestInt(work, date, "sessions"),
+            commits: digestInt(work, date, "commits"), files: digestInt(work, date, "files"),
+            generatedAt: LogicalDate.nowString(config: config), appVersion: AppVersion.current)
+        let html = ReportHTMLAssembler.assemble(chrome: chrome, markdownBody: md, css: css)
+        Task { @MainActor in
+            do {
+                let data = try await ReportPDF.makePDF(
+                    html: html, title: "하루 마감 보고서 \(date)", version: AppVersion.current)
+                PDFViewerController.shared.show(data: data, suggestedName: "DailyReport-\(date).pdf")
+            } catch { self.pdfError = "PDF 생성 실패: \(error.localizedDescription)" }
+        }
+    }
+
+    /// Read a single int stat out of `digest_<date>.json`'s top-level `stats` object.
+    private func digestInt(_ work: String, _ date: String, _ key: String) -> Int {
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: work + "/digest_\(date).json")),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let stats = obj["stats"] as? [String: Any], let n = stats[key] as? Int else { return 0 }
+        return n
     }
 
     // MARK: - Schedule (self-managed user LaunchAgent)
