@@ -22,6 +22,9 @@ Package.resolved
 *.xcworkspace/xcuserdata/
 DerivedData/
 
+# ── SDD 스크래치 (렛저·리뷰 패키지, 커밋 금지) ───────────────
+.superpowers/
+
 # ── 배포 산출물 ──────────────────────────────────────────────
 dist/
 dist/build/
