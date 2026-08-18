@@ -17,3 +17,23 @@ final class MarkdownToHTMLTests: XCTestCase {
         XCTAssertEqual(MarkdownToHTML.convert("---"), "<hr>")
     }
 }
+
+extension MarkdownToHTMLTests {
+    func test_inline_bold_becomes_b() {
+        XCTAssertEqual(MarkdownToHTML.convert("**굵게** 보통"),
+                       #"<p class="body"><b>굵게</b> 보통</p>"#)
+    }
+    func test_inline_code_becomes_code() {
+        XCTAssertEqual(MarkdownToHTML.convert("`swift build` 실행"),
+                       #"<p class="body"><code>swift build</code> 실행</p>"#)
+    }
+    func test_link_becomes_anchor() {
+        XCTAssertEqual(MarkdownToHTML.convert("[릴리스](https://x/y) 참고"),
+                       #"<p class="body"><a href="https://x/y">릴리스</a> 참고</p>"#)
+    }
+    func test_html_is_escaped_before_inline() {
+        // Raw HTML/special chars are neutralized; inline runs on escaped text.
+        XCTAssertEqual(MarkdownToHTML.convert("a < b & <script>"),
+                       #"<p class="body">a &lt; b &amp; &lt;script&gt;</p>"#)
+    }
+}
