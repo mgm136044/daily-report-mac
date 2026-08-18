@@ -13,17 +13,30 @@ final class PDFViewerController {
     func show(data: Data, suggestedName: String) {
         let view = PDFViewerView(data: data, suggestedName: suggestedName)
         if let window {
-            window.contentViewController = NSHostingController(rootView: view)
+            window.contentViewController = makeHosting(view)   // VF-1 reuse — same helper so it doesn't re-collapse
             window.title = suggestedName          // VF-1: keep the titlebar in sync when reusing the window
         } else {
-            let w = NSWindow(contentViewController: NSHostingController(rootView: view))
+            let w = NSWindow(contentViewController: makeHosting(view))
             w.setContentSize(NSSize(width: 720, height: 900))
+            w.contentMinSize = NSSize(width: 560, height: 680)
             w.title = suggestedName
             w.styleMask = [.titled, .closable, .resizable, .miniaturizable]
+            w.center()
             window = w
         }
         NSApp.activate(ignoringOtherApps: true)   // .accessory app must activate to show a window
         window?.makeKeyAndOrderFront(nil)
+    }
+
+    /// Host `view` without letting NSHostingController shrink the window to the SwiftUI fitting
+    /// size. By default the controller collapses the window to the content's intrinsic size — and
+    /// `PDFKitView` (a scroll view) has none — which silently overrode `setContentSize(720×900)`
+    /// and made the window open tiny. `sizingOptions = []` disables that auto-fit. Both the
+    /// first-create and the reuse (VF-1) paths route through here so neither re-collapses.
+    private func makeHosting(_ view: PDFViewerView) -> NSHostingController<PDFViewerView> {
+        let hc = NSHostingController(rootView: view)
+        hc.sizingOptions = []
+        return hc
     }
 }
 
@@ -33,6 +46,7 @@ private struct PDFViewerView: View {
     var body: some View {
         VStack(spacing: 0) {
             PDFKitView(data: data)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)   // fill the window; PDFView has no intrinsic size
             Divider()
             HStack {
                 Spacer()
@@ -40,6 +54,7 @@ private struct PDFViewerView: View {
             }
             .padding(8)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     private func save() {
         let panel = NSSavePanel()
