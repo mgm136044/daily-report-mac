@@ -9,20 +9,28 @@ import PDFKit
 final class PDFViewerController {
     static let shared = PDFViewerController()
     private var window: NSWindow?
+    private var hosting: NSHostingController<PDFViewerView>?
 
     func show(data: Data, suggestedName: String) {
         let view = PDFViewerView(data: data, suggestedName: suggestedName)
-        if let window {
-            window.contentViewController = makeHosting(view)   // VF-1 reuse — same helper so it doesn't re-collapse
-            window.title = suggestedName          // VF-1: keep the titlebar in sync when reusing the window
+        if let window, let hosting {
+            // Reuse (VF-1): update the SwiftUI content IN PLACE. Reassigning contentViewController
+            // makes AppKit resize the window to the fitting size once — collapsing it to ~1×0 (VF-2),
+            // which `sizingOptions = []` does NOT prevent. Setting rootView leaves the frame alone.
+            hosting.rootView = view
+            window.title = suggestedName
         } else {
-            let w = NSWindow(contentViewController: makeHosting(view))
+            let hc = makeHosting(view)
+            let w = NSWindow(contentViewController: hc)
+            // styleMask first, THEN sizes: setting styleMask afterwards can reset the window's
+            // content-size floor (contentMinSize was observed cleared to 0×0 when set before it).
+            w.styleMask = [.titled, .closable, .resizable, .miniaturizable]
             w.setContentSize(NSSize(width: 720, height: 900))
             w.contentMinSize = NSSize(width: 560, height: 680)
             w.title = suggestedName
-            w.styleMask = [.titled, .closable, .resizable, .miniaturizable]
             w.center()
             window = w
+            hosting = hc
         }
         NSApp.activate(ignoringOtherApps: true)   // .accessory app must activate to show a window
         window?.makeKeyAndOrderFront(nil)
