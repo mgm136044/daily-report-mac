@@ -228,7 +228,10 @@ case "run-day":
                                           syncedDates: syncedDates)
             try? Ledger.write(state, to: ledgerURL)
             runTargets = Backfill.pendingDays(state: state, today: today)
-            if runTargets.isEmpty { print("밀린 날짜가 없습니다."); runSem.signal(); return }
+            // Nothing to back-fill → same neutral "no activity" exit the produced==0 path uses,
+            // so the app shows a notice instead of a silent spinner flash. exit() here mirrors the
+            // die() paths below (flock releases on process exit).
+            if runTargets.isEmpty { print("밀린 날짜가 없습니다."); exit(RunExit.noActivity) }
             print("밀린 날짜 \(runTargets.count)일: \(runTargets.joined(separator: ", "))")
         }
 
@@ -239,6 +242,7 @@ case "run-day":
         print(RunProgressWire.total(runTargets.count)); fflush(stdout)
 
         var okCount = 0
+        var produced = 0            // reports actually generated (skips don't count)
         var failed: [String] = []
         for (index, date) in runTargets.enumerated() {
             let runner = DayRunner(config: cfg, selfArtifactBase: base, stateDir: stateDir,
@@ -253,6 +257,7 @@ case "run-day":
                 if let skip = r.skipped {
                     entry["skipped"] = skip
                 } else {
+                    produced += 1
                     entry["projects"] = r.projects; entry["sessions"] = r.sessions
                     entry["files"] = r.files; entry["commits"] = r.commits
                     entry["report_chars"] = r.reportChars
@@ -273,6 +278,12 @@ case "run-day":
                               message: "\(failed.count)일 실패: \(failed.joined(separator: ", "))")
         }
         print("완료 \(okCount)일" + (failed.isEmpty ? "." : " · 실패 \(failed.count)일."))
+        // Ran to completion but produced no report (every target was skipped for no activity)
+        // → distinct exit code so the app shows a neutral notice instead of clearing silently.
+        // Conservative: with any produced report OR any failure this stays 0 (unchanged behavior).
+        if RunExit.finalCode(produced: produced, failed: failed.count) == RunExit.noActivity {
+            exit(RunExit.noActivity)
+        }
         runSem.signal()
     }
     runSem.wait()

@@ -25,4 +25,31 @@ final class RunExitTests: XCTestCase {
         }
         XCTAssertTrue(msg.contains("3"), "failure message should include the exit code")
     }
+
+    // MARK: - "no activity" exit code (produced nothing, no failures)
+
+    func test_noActivity_exit_code_is_73() {
+        // A distinct code so the app can tell "finished but made nothing" apart from
+        // 0 (finished) and 75 (busy). 73 == EX_CANTCREAT ("can't create output").
+        XCTAssertEqual(RunExit.noActivity, 73)
+    }
+
+    func test_finalCode_no_reports_and_no_failures_is_noActivity() {
+        // Ran to completion but produced zero reports (every target had no activity).
+        XCTAssertEqual(RunExit.finalCode(produced: 0, failed: 0), RunExit.noActivity)
+    }
+
+    func test_finalCode_with_produced_reports_is_zero() {
+        XCTAssertEqual(RunExit.finalCode(produced: 1, failed: 0), 0)
+    }
+
+    func test_finalCode_failures_stay_zero_conservative() {
+        // Conservative scope: failures keep the existing exit-0 behavior (improving the
+        // failure exit code is out of scope); only produced==0 && failed==0 is noActivity.
+        XCTAssertEqual(RunExit.finalCode(produced: 0, failed: 2), 0)
+    }
+
+    func test_noActivity_code_maps_to_noActivity_outcome() {
+        XCTAssertEqual(RunExit.outcome(for: RunExit.noActivity), .noActivity)
+    }
 }

@@ -230,6 +230,10 @@ final class AppState: ObservableObject {
 
     // MARK: - Report runs
 
+    /// The logical dates the most recent run was asked to produce (empty = auto-backfill).
+    /// Remembered so a `.noActivity` exit can name the requested date(s) in its notice.
+    private var lastRequestedDates: [String] = []
+
     func runNow() { runDates([]) }                                                    // backfill missed days
     func runToday() { runDates([LogicalDate.logicalDate(Date(), config: config)]) }   // 퇴근: today, now
     func runDate(_ ymd: String) { runDates([ymd]) }                                   // any past date
@@ -243,6 +247,7 @@ final class AppState: ObservableObject {
         lastError = nil
         notice = nil
         progress = nil
+        lastRequestedDates = dates
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         p.arguments = [runnerPath, "run-day"] + dates
@@ -275,11 +280,27 @@ final class AppState: ObservableObject {
                 switch RunExit.outcome(for: code) {
                 case .ok:            self?.lastError = nil; self?.notice = nil
                 case .busy(let m):   self?.lastError = nil; self?.notice = m
+                case .noActivity:    self?.lastError = nil
+                                     self?.notice = self?.noActivityMessage(for: self?.lastRequestedDates ?? [])
                 case .failed(let m): self?.notice = nil; self?.lastError = m
                 }
             }
         }
         do { try p.run() } catch { lastError = "실행 실패: \(error)"; running = false }
+    }
+
+    /// Assemble the neutral "no activity" notice, naming the requested date(s). The runner
+    /// exits `.noActivity` when it made no report; the app owns the wording because it knows
+    /// which date(s) were asked for.
+    private func noActivityMessage(for dates: [String]) -> String {
+        if dates.isEmpty { return "새로 만들 보고서가 없어요 (밀린 날짜 없음 또는 활동 없음)." }
+        if dates.count == 1 {
+            let today = LogicalDate.logicalDate(Date(), config: config)
+            return dates[0] == today
+                ? "오늘은 기록된 활동이 없어 보고서를 만들지 않았어요."
+                : "\(dates[0])은(는) 기록된 활동이 없어 보고서를 만들지 않았어요."
+        }
+        return "선택한 날짜에 기록된 활동이 없어요."
     }
 
     // MARK: - PDF export
