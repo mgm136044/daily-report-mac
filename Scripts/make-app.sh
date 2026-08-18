@@ -36,18 +36,14 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/DailyReport            "$APP/Contents/MacOS/DailyReport"
 cp .build/release/daily-report-runner    "$APP/Contents/MacOS/daily-report-runner"
 
-# SwiftPM's generated Bundle.module accessor resolves resources via
-# `Bundle.main.bundleURL.appendingPathComponent("<pkg>_<target>.bundle")` — and
-# Bundle.main.bundleURL for a macOS app is the .app ROOT, not Contents/MacOS or
-# Contents/Resources (verified empirically with a throwaway probe .app). So the
-# resource bundle must sit directly inside $APP, sibling to Contents/.
-RESOURCE_BUNDLE=".build/release/daily-report-mac_DailyReport.bundle"
-if [ -d "$RESOURCE_BUNDLE" ]; then
-    cp -R "$RESOURCE_BUNDLE" "$APP/"
-else
-    echo "✗ SwiftPM 리소스 번들 없음: $RESOURCE_BUNDLE (design-system.css 로드 실패 위험)"
-    exit 1
-fi
+# design-system.css goes in Contents/Resources so the app loads it via Bundle.main and
+# codesign SEALS it. (The SwiftPM Bundle.module bundle would have to sit at the .app ROOT —
+# Bundle.main.bundleURL — which codesign rejects as "unsealed contents present in the bundle
+# root", breaking the Developer ID signature. The app tries Bundle.main first and only falls
+# back to Bundle.module under `swift run`.)
+CSS_SRC="Sources/DailyReport/Resources/design-system.css"
+[ -f "$CSS_SRC" ] || { echo "✗ $CSS_SRC 없음 — design-system.css 번들 실패"; exit 1; }
+cp "$CSS_SRC" "$APP/Contents/Resources/design-system.css"
 
 # App icon: build a multi-resolution .icns from Resources/logo.png (source of truth).
 if [ -f Resources/logo.png ]; then

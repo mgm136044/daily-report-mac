@@ -313,9 +313,13 @@ final class AppState: ObservableObject {
         guard let md = try? String(contentsOfFile: work + "/report_\(date).md", encoding: .utf8) else {
             pdfError = "\(date) 보고서 원문이 아직 없습니다."; return
         }
-        // design-system.css ships as a SwiftPM resource in the module bundle. Bundle.module
-        // (NOT Bundle.main) is required — Bundle.main has no SwiftPM resources under `swift run`.
-        guard let cssURL = Bundle.module.url(forResource: "design-system", withExtension: "css"),
+        // design-system.css lives in the .app's Contents/Resources — loaded via Bundle.main
+        // and sealed by codesign. Bundle.module cannot be used in the distributed .app: its
+        // generated accessor only looks at the app ROOT (Bundle.main.bundleURL), which codesign
+        // rejects as "unsealed contents". Under `swift run` there is no .app, so fall back to
+        // Bundle.module (its build-path candidate resolves the SwiftPM resource).
+        guard let cssURL = Bundle.main.url(forResource: "design-system", withExtension: "css")
+                ?? Bundle.module.url(forResource: "design-system", withExtension: "css"),
               let css = try? String(contentsOf: cssURL, encoding: .utf8) else {
             pdfError = "디자인 CSS를 찾을 수 없습니다."; return
         }
