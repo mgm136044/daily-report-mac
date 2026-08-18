@@ -36,4 +36,24 @@ extension MarkdownToHTMLTests {
         XCTAssertEqual(MarkdownToHTML.convert("a < b & <script>"),
                        #"<p class="body">a &lt; b &amp; &lt;script&gt;</p>"#)
     }
+    func test_unordered_list() {
+        XCTAssertEqual(MarkdownToHTML.convert("- 하나\n- 둘"),
+            #"<ul class="body"><li>하나</li><li>둘</li></ul>"#)
+    }
+    func test_ordered_list() {
+        XCTAssertEqual(MarkdownToHTML.convert("1. 하나\n2. 둘"),
+            #"<ol class="body"><li>하나</li><li>둘</li></ol>"#)
+    }
+    func test_nested_unordered_list() {
+        XCTAssertEqual(MarkdownToHTML.convert("- 상위\n  - 하위"),
+            #"<ul class="body"><li>상위<ul class="body"><li>하위</li></ul></li></ul>"#)
+    }
+    func test_blockquote_joins_lines() {
+        XCTAssertEqual(MarkdownToHTML.convert("> 한 줄\n> 두 줄"),
+            "<blockquote>한 줄 두 줄</blockquote>")
+    }
+    func test_fenced_code_block_is_preserved_and_escaped() {
+        XCTAssertEqual(MarkdownToHTML.convert("```\na < b\n```"),
+            "<pre><code>a &lt; b</code></pre>")
+    }
 }

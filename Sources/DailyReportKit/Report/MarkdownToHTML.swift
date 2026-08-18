@@ -18,6 +18,33 @@ public enum MarkdownToHTML {
             }
             if trimmed.isEmpty { i += 1; continue }
 
+            // fenced code block
+            if trimmed.hasPrefix("```") {
+                var code: [String] = []
+                i += 1
+                while i < lines.count, !lines[i].trimmingCharacters(in: .whitespaces).hasPrefix("```") {
+                    code.append(lines[i]); i += 1
+                }
+                if i < lines.count { i += 1 }  // consume closing fence
+                out.append("<pre><code>" + Self.escape(code.joined(separator: "\n")) + "</code></pre>")
+                continue
+            }
+            // blockquote
+            if trimmed.hasPrefix(">") {
+                var quote: [String] = []
+                while i < lines.count, lines[i].trimmingCharacters(in: .whitespaces).hasPrefix(">") {
+                    let t = lines[i].trimmingCharacters(in: .whitespaces)
+                    quote.append(String(t.dropFirst()).trimmingCharacters(in: .whitespaces)); i += 1
+                }
+                out.append("<blockquote>" + Self.inline(quote.joined(separator: " ")) + "</blockquote>")
+                continue
+            }
+            // list (indent-based nesting)
+            if Self.listMarker(trimmed) != nil {
+                let (listHTML, next) = Self.parseList(lines, from: i, minIndent: Self.indent(line))
+                out.append(listHTML); i = next; continue
+            }
+
             // paragraph: gather consecutive non-blank, non-block lines
             var para: [String] = []
             while i < lines.count {
@@ -92,5 +119,47 @@ extension MarkdownToHTML {
         }
         result += ns.substring(from: last)
         return result
+    }
+
+    static func indent(_ line: String) -> Int { line.prefix { $0 == " " }.count }
+
+    /// Returns "ul"/"ol" if the trimmed line starts a list item, else nil.
+    static func listMarker(_ trimmed: String) -> String? {
+        if trimmed.hasPrefix("- ") { return "ul" }
+        if let dot = trimmed.firstIndex(of: "."),
+           trimmed[..<dot].allSatisfy(\.isNumber), !trimmed[..<dot].isEmpty,
+           trimmed.index(after: dot) < trimmed.endIndex, trimmed[trimmed.index(after: dot)] == " " {
+            return "ol"
+        }
+        return nil
+    }
+
+    static func itemText(_ trimmed: String) -> String {
+        if trimmed.hasPrefix("- ") { return String(trimmed.dropFirst(2)) }
+        let dot = trimmed.firstIndex(of: ".")!
+        return String(trimmed[trimmed.index(after: dot)...]).trimmingCharacters(in: .whitespaces)
+    }
+
+    /// Parse a list starting at `from`, consuming items at >= minIndent. Deeper-indented
+    /// items recurse into a nested list appended inside the current <li>.
+    static func parseList(_ lines: [String], from: Int, minIndent: Int) -> (String, Int) {
+        let tag = listMarker(lines[from].trimmingCharacters(in: .whitespaces))!
+        var items: [String] = []
+        var i = from
+        while i < lines.count {
+            let raw = lines[i]
+            let trimmed = raw.trimmingCharacters(in: .whitespaces)
+            guard listMarker(trimmed) != nil, indent(raw) >= minIndent else { break }
+            var li = inline(itemText(trimmed))
+            i += 1
+            // nested list: following lines indented deeper
+            if i < lines.count, listMarker(lines[i].trimmingCharacters(in: .whitespaces)) != nil,
+               indent(lines[i]) > indent(raw) {
+                let (nested, next) = parseList(lines, from: i, minIndent: indent(lines[i]))
+                li += nested; i = next
+            }
+            items.append("<li>" + li + "</li>")
+        }
+        return (#"<"# + tag + #" class="body">"# + items.joined() + "</" + tag + ">", i)
     }
 }
