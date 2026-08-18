@@ -35,7 +35,11 @@ struct StatusView: View {
                         ForEach(state.summary.cards, id: \.date) { DayCardView(card: $0) }
                     }
                 }
-                .frame(maxHeight: 300)
+                // Fixed height (not maxHeight): the card area is the only vertically
+                // compressible element in the popover, so a notice/error/banner used to
+                // shrink it. A fixed 380 keeps it constant (and larger) — notices grow the
+                // popover downward instead of eating the cards.
+                .frame(height: 380)
             }
 
             Divider()

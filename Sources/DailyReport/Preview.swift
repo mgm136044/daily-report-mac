@@ -139,6 +139,9 @@ struct StatusPreview: View {
             VStack(spacing: 8) {
                 ForEach(summary.cards, id: \.date) { DayCardView(card: $0) }
             }
+            // mirror StatusView §4: fixed 380 card area, unaffected by notices below. No ScrollView here —
+            // ImageRenderer (used by --render) can't snapshot a ScrollView's content; the real StatusView keeps it.
+            .frame(height: 380, alignment: .top)
 
             Divider()
             VStack(alignment: .leading, spacing: 8) {
@@ -156,6 +159,10 @@ struct StatusPreview: View {
                 }
                 .font(.system(size: 12))
             }
+
+            // sample notice — demonstrates the card area above stays 380 even with a notice present
+            Text("오늘은 기록된 활동이 없어 보고서를 만들지 않았어요.")
+                .font(.system(size: 11)).foregroundStyle(.orange)
 
             Divider()
             HStack(spacing: 12) {
