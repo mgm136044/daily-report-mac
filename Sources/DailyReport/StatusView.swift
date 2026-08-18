@@ -45,6 +45,10 @@ struct StatusView: View {
                 Text(err).font(.system(size: 11)).foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            if let pdfErr = state.pdfError {
+                Text(pdfErr).font(.system(size: 11)).foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if let note = state.notice {
                 Text(note).font(.system(size: 11)).foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
