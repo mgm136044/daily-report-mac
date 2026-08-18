@@ -14,6 +14,7 @@ final class PDFViewerController {
         let view = PDFViewerView(data: data, suggestedName: suggestedName)
         if let window {
             window.contentViewController = NSHostingController(rootView: view)
+            window.title = suggestedName          // VF-1: keep the titlebar in sync when reusing the window
         } else {
             let w = NSWindow(contentViewController: NSHostingController(rootView: view))
             w.setContentSize(NSSize(width: 720, height: 900))
