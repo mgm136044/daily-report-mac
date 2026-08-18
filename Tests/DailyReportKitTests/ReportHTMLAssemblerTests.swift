@@ -44,4 +44,20 @@ final class ReportHTMLAssemblerTests: XCTestCase {
         let html = ReportHTMLAssembler.assemble(chrome: chrome(), markdownBody: "# 안녕", css: "")
         XCTAssertFalse(html.contains("<h1"))
     }
+
+    // MARK: - PDF print-mode override (grey-preview backdrop removal)
+
+    func test_pdf_html_neutralizes_preview_chrome_for_print() {
+        let html = ReportHTMLAssembler.assemble(chrome: chrome(), markdownBody: "", css: "/* c */")
+        // WKWebView.createPDF renders screen media (@media print never fires), so the
+        // assembler re-applies the print look unconditionally: white background, no shadow.
+        XCTAssertTrue(html.contains("html, body { background: #fff; padding: 0; }"))
+        XCTAssertTrue(html.contains(".page { box-shadow: none; }"))
+    }
+
+    func test_still_embeds_css_verbatim() {   // B3 regression guard — the override must not break the verbatim embed
+        let css = "/* CANON */ .page { color: #000; }"
+        let html = ReportHTMLAssembler.assemble(chrome: chrome(), markdownBody: "", css: css)
+        XCTAssertTrue(html.contains("<style>\n\(css)\n</style>"))
+    }
 }

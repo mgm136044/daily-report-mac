@@ -31,6 +31,13 @@ public enum ReportHTMLAssembler {
         <style>
         \(css)
         </style>
+        <style>
+        /* PDF render: WKWebView.createPDF uses screen media, so @media print never fires.
+           Re-apply the print look unconditionally → clean white output, not the grey preview backdrop.
+           Kept as a SEPARATE block so the verbatim design-system.css embed above is byte-for-byte (B3). */
+        html, body { background: #fff; padding: 0; }
+        .page { box-shadow: none; }
+        </style>
         </head>
         <body>
           <main class="page">
