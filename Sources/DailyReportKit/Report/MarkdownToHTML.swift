@@ -49,7 +49,8 @@ public enum MarkdownToHTML {
             var para: [String] = []
             while i < lines.count {
                 let l = lines[i].trimmingCharacters(in: .whitespaces)
-                if l.isEmpty || l == "---" || Self.heading(l) != nil { break }
+                if l.isEmpty || l == "---" || Self.heading(l) != nil
+                    || Self.listMarker(l) != nil || l.hasPrefix(">") || l.hasPrefix("```") { break }
                 para.append(l); i += 1
             }
             out.append(#"<p class="body">"# + Self.inline(para.joined(separator: " ")) + "</p>")
@@ -97,6 +98,7 @@ extension MarkdownToHTML {
         text.replacingOccurrences(of: "&", with: "&amp;")
             .replacingOccurrences(of: "<", with: "&lt;")
             .replacingOccurrences(of: ">", with: "&gt;")
+            .replacingOccurrences(of: "\"", with: "&quot;")
     }
 
     /// Single-capture regex replace.

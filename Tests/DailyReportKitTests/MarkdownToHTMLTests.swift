@@ -57,3 +57,30 @@ extension MarkdownToHTMLTests {
             "<pre><code>a &lt; b</code></pre>")
     }
 }
+
+extension MarkdownToHTMLTests {
+    func test_paragraph_immediately_followed_by_list_stays_separate_blocks() {
+        // No blank line between the paragraph and the list: the paragraph gather
+        // must still stop at the list start instead of swallowing it into the <p>.
+        XCTAssertEqual(MarkdownToHTML.convert("문단\n- 항목"),
+            #"<p class="body">문단</p>"# + "\n" + #"<ul class="body"><li>항목</li></ul>"#)
+    }
+    func test_paragraph_immediately_followed_by_blockquote_stays_separate_blocks() {
+        XCTAssertEqual(MarkdownToHTML.convert("문단\n> 인용"),
+            #"<p class="body">문단</p>"# + "\n<blockquote>인용</blockquote>")
+    }
+    func test_paragraph_immediately_followed_by_fenced_code_stays_separate_blocks() {
+        XCTAssertEqual(MarkdownToHTML.convert("문단\n```\n코드\n```"),
+            #"<p class="body">문단</p>"# + "\n<pre><code>코드</code></pre>")
+    }
+    func test_double_quote_in_paragraph_is_escaped() {
+        XCTAssertEqual(MarkdownToHTML.convert(#"그는 "안녕"이라 했다"#),
+            #"<p class="body">그는 &quot;안녕&quot;이라 했다</p>"#)
+    }
+    func test_double_quote_in_link_url_is_escaped_in_href() {
+        // escape() runs before the link regex captures the URL, so a raw '"' inside
+        // the URL becomes &quot; and can no longer break out of the href attribute.
+        XCTAssertEqual(MarkdownToHTML.convert(#"[링크](https://x/y?q="v") 설명"#),
+            #"<p class="body"><a href="https://x/y?q=&quot;v&quot;">링크</a> 설명</p>"#)
+    }
+}
